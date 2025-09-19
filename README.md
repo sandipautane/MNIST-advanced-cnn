@@ -6,10 +6,10 @@ This project trains a compact convolutional neural network on MNIST. The network
 ### Architecture
 - Input: 1×28×28 grayscale image
 - Feature extractor:
-  - Block 1: Conv(1→6, 3×3, padding=1) → BatchNorm(6) → ReLU → MaxPool(2×2)
-  - Block 2: Conv(6→12, 3×3, padding=1) → BatchNorm(12) → ReLU → MaxPool(2×2)
-  - Block 3: Conv(12→24, 3×3, padding=1) → BatchNorm(24) → ReLU → MaxPool(2×2)
-  - Block 4: Conv(24→32, 3×3, padding=1) → BatchNorm(32) → ReLU → MaxPool(2×2)
+  - Block 1: Conv(1→6, 3×3, padding=1) → BatchNorm(6) → ReLU → MaxPool(2×2) → Dropout2d(0.0)
+  - Block 2: Conv(6→12, 3×3, padding=1) → BatchNorm(12) → ReLU → MaxPool(2×2) → Dropout2d(0.0)
+  - Block 3: Conv(12→24, 3×3, padding=1) → BatchNorm(24) → ReLU → MaxPool(2×2) → Dropout2d(0.1)
+  - Block 4: Conv(24→32, 3×3, padding=1) → BatchNorm(32) → ReLU → MaxPool(2×2) → Dropout2d(0.0)
 - Classifier:
   - Flatten (32×1×1)
   - Linear(32 → 10)
@@ -40,32 +40,27 @@ python model.py
 ### Parameter Count
 `model.py` prints the total and trainable parameter counts at startup. Example:
 ```
-Final model - Total parameters: 10,758 | Trainable parameters: 10,758
+Final model - Total parameters: 12,xxx | Trainable parameters: 12,xxx
 ```
 
 ### Training Metrics (per epoch)
-The script prints epoch-wise metrics to the console. Record them here after a run.
 
 | Epoch | Train Loss | Train Acc | Val Loss | Val Acc |
 |------:|-----------:|----------:|---------:|--------:|
-| 1 |    0.2123    |   0.9486     |   0.0649     |  0.9815      |
-| 2 |  0.0567      |   0.9833     |  0.0537      |  0.9835      |
-| 3 |   0.0421     |    0.9870    |   0.0407     |    0.9864    |
-| 4 |    0.0348    |   0.9888     |    0.0471    |   0.9851     |
-| 5 |   0.0302     |     0.9902   |    0.0356    |    0.9875    |
-| 6 |    0.0260    |   0.9918     |    0.0368    |   0.9886     |
-| 7 |    0.0226    |    0.9928    |    0.0377    |   0.9876     |
-| 8 |        |        |        |        |
-| 9 |        |        |        |        |
-| 10 |       |        |        |        |
+| 1 | 0.2624 | 0.9355 | 0.0590 | 0.9837 |
+| 2 | 0.0678 | 0.9801 | 0.0463 | 0.9843 |
+| 3 | 0.0522 | 0.9837 | 0.0436 | 0.9853 |
+| 4 | 0.0436 | 0.9867 | 0.0354 | 0.9893 |
+| 5 | 0.0373 | 0.9884 | 0.0394 | 0.9866 |
+| 6 | 0.0333 | 0.9895 | 0.0307 | 0.9890 |
+| 7 | 0.0328 | 0.9895 | 0.0409 | 0.9861 |
+| 8 | 0.0279 | 0.9909 | 0.0304 | 0.9900 |
+| 9 | 0.0264 | 0.9912 | 0.0284 | 0.9898 |
+| 10 | 0.0249 | 0.9920 | 0.0291 | 0.9905 |
 
-Tip: You can copy the printed epoch lines into this table. They look like:
-```
-Epoch 05 | Train Loss: 0.0xxx | Train Acc: 0.99xx | Val Loss: 0.0xxx | Val Acc: 0.99xx
-```
+**Final Test Accuracy: TBD**
 
 *Metrics updated automatically after training.*
-
 ### Optional: Save Metrics Automatically
 If you want to save metrics during training, you can serialize the `history` dict returned by `train(...)`:
 ```python
