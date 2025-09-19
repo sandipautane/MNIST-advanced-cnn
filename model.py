@@ -32,7 +32,7 @@ class Model(nn.Module):
             nn.BatchNorm2d(24),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(2, 2),
-            nn.Dropout2d(0.0),
+            nn.Dropout2d(0.1),
 
              #Block 4: 3x3 -> 1x1
             nn.Conv2d(24, 32, kernel_size=3, padding=1),
