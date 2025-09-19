@@ -1,0 +1,252 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
+import matplotlib.pyplot as plt
+
+class Model(nn.Module):
+
+    def __init__(self, num_classes=10):
+        super(Model, self).__init__()
+        
+      # Feature extraction
+        self.features = nn.Sequential(
+            # Block 1
+            nn.Conv2d(1, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(32, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2),
+            nn.Dropout2d(0.25),
+            
+            # Block 2
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2),
+            nn.Dropout2d(0.25),
+            
+            # Block 3
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(128, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2, 2),
+            nn.Dropout2d(0.25),
+        )
+        
+        # Classifier
+        self.classifier = nn.Sequential(
+            nn.Linear(128 * 3 * 3, 512),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.5),
+            nn.Linear(512, 256),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.5),
+            nn.Linear(256, num_classes)
+        )
+        
+    def configure_optimizers(self):
+        return optim.Adam(self.parameters(), lr=0.001)
+    
+    def forward(self, x):
+        x = self.features(x)
+        x = x.view(x.size(0), -1)
+        x = self.classifier(x)
+        return F.log_softmax(x, dim=1)
+
+
+    
+    
+def count_parameters(model):
+    total = sum(p.numel() for p in model.parameters())
+    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    return total, trainable
+
+
+def evaluate(model, data_loader):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.eval()
+    total_loss = 0.0
+    total_correct = 0
+    total_examples = 0
+    with torch.no_grad():
+        for data, target in data_loader:
+            data, target = data.to(device), target.to(device)
+            output = model(data)
+            loss = F.nll_loss(output, target, reduction='sum')
+            total_loss += loss.item()
+            preds = output.argmax(dim=1)
+            total_correct += (preds == target).sum().item()
+            total_examples += target.size(0)
+    avg_loss = total_loss / max(total_examples, 1)
+    accuracy = total_correct / max(total_examples, 1)
+    return avg_loss, accuracy
+
+
+def train(model, train_loader, val_loader, epochs):
+    optimizer = model.configure_optimizers()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+
+    train_losses = []  # per-epoch average
+    val_losses = []    # per-epoch average
+    train_batch_losses = []  # per-batch loss
+    val_batch_losses = []    # per-batch loss
+    train_accuracies = []
+    val_accuracies = []
+
+    for epoch in range(1, epochs + 1):
+        model.train()
+        running_loss = 0.0
+        running_correct = 0
+        running_examples = 0
+
+        val_iter = iter(val_loader)
+        for batch_idx, (data, target) in enumerate(train_loader):
+            data, target = data.to(device), target.to(device)
+            optimizer.zero_grad()
+            output = model(data)
+            loss = F.nll_loss(output, target)
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.item() * target.size(0)
+            preds = output.argmax(dim=1)
+            running_correct += (preds == target).sum().item()
+            running_examples += target.size(0)
+
+            # Record and print per-batch training loss
+            train_batch_losses.append(loss.item())
+
+            # Compute a validation batch loss to print alongside
+            model.eval()
+            with torch.no_grad():
+                try:
+                    val_data, val_target = next(val_iter)
+                except StopIteration:
+                    val_iter = iter(val_loader)
+                    val_data, val_target = next(val_iter)
+                val_data, val_target = val_data.to(device), val_target.to(device)
+                val_output = model(val_data)
+                val_loss_batch = F.nll_loss(val_output, val_target).item()
+                val_batch_losses.append(val_loss_batch)
+            model.train()
+
+            if batch_idx % 100 == 0:
+                print(
+                    f"Epoch {epoch} | Batch {batch_idx} | "
+                    f"Train Loss: {loss.item():.4f} | Val Loss: {val_loss_batch:.4f}"
+                )
+
+        epoch_train_loss = running_loss / max(running_examples, 1)
+        epoch_train_acc = running_correct / max(running_examples, 1)
+
+        val_loss, val_acc = evaluate(model, val_loader)
+
+        train_losses.append(epoch_train_loss)
+        train_accuracies.append(epoch_train_acc)
+        val_losses.append(val_loss)
+        val_accuracies.append(val_acc)
+
+        print(
+            f"Epoch {epoch:02d} | "
+            f"Train Loss: {epoch_train_loss:.4f} | Train Acc: {epoch_train_acc:.4f} | "
+            f"Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.4f}"
+        )
+
+    return model, {
+        'train_losses': train_losses,
+        'val_losses': val_losses,
+        'train_accuracies': train_accuracies,
+        'val_accuracies': val_accuracies,
+        'train_batch_losses': train_batch_losses,
+        'val_batch_losses': val_batch_losses,
+    }
+    
+def test(model, test_loader):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for data, target in test_loader:
+            data, target = data.to(device), target.to(device)
+            output = model(data)
+            _, predicted = torch.max(output.data, 1)
+            total += target.size(0)
+            correct += (predicted == target).sum().item()
+    return correct / total
+
+
+def plot_losses(history):
+    # Per-batch plot
+    plt.figure(figsize=(9, 5))
+    plt.plot(range(1, len(history['train_batch_losses']) + 1), history['train_batch_losses'], label='Train Loss (batch)')
+    plt.plot(range(1, len(history['val_batch_losses']) + 1), history['val_batch_losses'], label='Val Loss (batch)')
+    plt.xlabel('Batch')
+    plt.ylabel('Loss')
+    plt.title('Per-batch Training and Validation Loss')
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.tight_layout()
+    plt.show()
+
+    # Per-epoch plot (kept for reference)
+    if len(history['train_losses']) > 0:
+        plt.figure(figsize=(9, 5))
+        epochs = range(1, len(history['train_losses']) + 1)
+        plt.plot(epochs, history['train_losses'], label='Train Loss (epoch)')
+        plt.plot(epochs, history['val_losses'], label='Val Loss (epoch)')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.title('Per-epoch Training and Validation Loss')
+        plt.legend()
+        plt.grid(True, linestyle='--', alpha=0.5)
+        plt.tight_layout()
+        plt.show()
+
+
+if __name__ == "__main__":
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    pin_memory = device.type == "cuda"
+
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.1307,), (0.3081,))
+    ])
+
+    train_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
+    test_dataset = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
+
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=64,
+        shuffle=True,
+        num_workers=0,
+        pin_memory=pin_memory
+    )
+
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=64,
+        shuffle=False,
+        num_workers=0,
+        pin_memory=pin_memory
+    )
+
+    model = Model()
+    total_params, trainable_params = count_parameters(model)
+    print(f"Total parameters: {total_params} | Trainable parameters: {trainable_params}")
+    model, history = train(model, train_loader, test_loader, 10)
+    print(test(model, test_loader))
+    plot_losses(history)
