@@ -58,7 +58,7 @@ Final model - Total parameters: 12,xxx | Trainable parameters: 12,xxx
 | 9 | 0.0264 | 0.9912 | 0.0284 | 0.9898 |
 | 10 | 0.0249 | 0.9920 | 0.0291 | 0.9905 |
 
-**Final Test Accuracy: TBD**
+**Final Test Accuracy: 99.05**
 
 *Metrics updated automatically after training.*
 ### Optional: Save Metrics Automatically
