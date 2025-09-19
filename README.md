@@ -40,7 +40,7 @@ python model.py
 ### Parameter Count
 `model.py` prints the total and trainable parameter counts at startup. Example:
 ```
-Final model - Total parameters: 12,xxx | Trainable parameters: 12,xxx
+Final model - Total parameters: 10,758 | Trainable parameters: 10,758
 ```
 
 ### Training Metrics (per epoch)
@@ -48,13 +48,13 @@ The script prints epoch-wise metrics to the console. Record them here after a ru
 
 | Epoch | Train Loss | Train Acc | Val Loss | Val Acc |
 |------:|-----------:|----------:|---------:|--------:|
-| 1 |        |        |        |        |
-| 2 |        |        |        |        |
-| 3 |        |        |        |        |
-| 4 |        |        |        |        |
-| 5 |        |        |        |        |
-| 6 |        |        |        |        |
-| 7 |        |        |        |        |
+| 1 |    0.2123    |   0.9486     |   0.0649     |  0.9815      |
+| 2 |  0.0567      |   0.9833     |  0.0537      |  0.9835      |
+| 3 |   0.0421     |    0.9870    |   0.0407     |    0.9864    |
+| 4 |    0.0348    |   0.9888     |    0.0471    |   0.9851     |
+| 5 |   0.0302     |     0.9902   |    0.0356    |    0.9875    |
+| 6 |    0.0260    |   0.9918     |    0.0368    |   0.9886     |
+| 7 |    0.0226    |    0.9928    |    0.0377    |   0.9876     |
 | 8 |        |        |        |        |
 | 9 |        |        |        |        |
 | 10 |       |        |        |        |
